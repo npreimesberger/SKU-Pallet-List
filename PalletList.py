@@ -1,20 +1,17 @@
 import streamlit as st
 
-# Store SKU data persistently across interactions
+# Keep SKU data across interactions
 if "sku_dict" not in st.session_state:
     st.session_state.sku_dict = {}
 
 st.title("SKU Pallet Optimizer")
 
-# Input for SKU
-sku = st.text_input("Enter a SKU (leave blank if you're done):")
-
-# Input for pallet locations
+# --- Input section ---
+sku = st.text_input("Enter a SKU:")
 pallet_locations = st.text_input(
     "Enter pallet locations for this SKU (comma-separated):"
 )
 
-# Button to add the SKU + pallets to the dictionary
 if st.button("Add SKU"):
     if sku and pallet_locations:
         locations = {loc.strip() for loc in pallet_locations.split(",")}
@@ -26,13 +23,13 @@ if st.button("Add SKU"):
     else:
         st.warning("Please enter both a SKU and at least one pallet location.")
 
-# Show current entries
+# --- Show current entries ---
 if st.session_state.sku_dict:
-    st.write("### Current SKUs and Pallet Locations:")
+    st.subheader("Current SKUs and Pallet Locations")
     for s, locs in st.session_state.sku_dict.items():
-        st.write(f"- {s}: {', '.join(locs)}")
+        st.write(f"- {s}: {', '.join(sorted(locs))}")
 
-# Greedy set cover to minimize pallets
+# --- Function for greedy set cover ---
 def find_min_pallet_locations(sku_dict):
     pallet_dict = {}
     for sku, pallets in sku_dict.items():
@@ -44,4 +41,20 @@ def find_min_pallet_locations(sku_dict):
     all_skus = set(sku_dict.keys())
 
     while covered_skus != all_skus:
-        best
+        best_pallet = max(
+            pallet_dict.items(), key=lambda x: len(x[1] - covered_skus)
+        )[0]
+        selected_pallets.add(best_pallet)
+        covered_skus.update(pallet_dict[best_pallet])
+
+    return selected_pallets
+
+# --- Always show this button ---
+if st.button("Generate Minimum Pallet List"):
+    if st.session_state.sku_dict:
+        result = find_min_pallet_locations(st.session_state.sku_dict)
+        st.subheader("Minimum Pallet Locations Required")
+        for pallet in sorted(result):
+            st.write(f"- {pallet}")
+    else:
+        st.warning("No SKUs entered yet.")
